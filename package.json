@@ -1,0 +1,20 @@
+{
+    "name": "kaksha-api",
+    "version": "1.0.0",
+    "description": "Backend APIs for Ram's Kaksha",
+    "main": "app.js",
+    "scripts": {
+        "test": "echo \"Error: no test specified\" && exit 1",
+        "server": "nodemon app.js"
+    },
+    "author": "Ram Krishnan",
+    "license": "ISC",
+    "devDependencies": {
+        "nodemon": "^2.0.6"
+    },
+    "dependencies": {
+        "dotenv": "^8.2.0",
+        "express": "^4.17.1",
+        "mongoose": "^5.10.11"
+    }
+}
