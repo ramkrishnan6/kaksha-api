@@ -25,7 +25,12 @@ const userSchema = new mongoose.Schema({
         min: 6,
         max: 1024,
     },
-    joined_on: {
+    role: {
+        type: String,
+        enum: ["student", "teacher"],
+        default: "student",
+    },
+    created_at: {
         type: Date,
         default: Date.now,
     },
