@@ -18,7 +18,7 @@ router.post("", verifyToken, async (req, res) => {
     }
 });
 
-router.get("/:id", async (req, res) => {
+router.get("/:id", verifyToken, async (req, res) => {
     try {
         const { number, is_active } = await Class.findOne({
             number: req.params.id,
@@ -40,7 +40,7 @@ router.get("/:id", async (req, res) => {
     }
 });
 
-router.put("/:id", async (req, res) => {
+router.put("/:id", verifyToken, async (req, res) => {
     try {
         const updatedPost = await Class.updateOne(
             { number: req.params.id },
