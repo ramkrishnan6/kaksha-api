@@ -97,20 +97,14 @@ function removeClientFromMap(userName, socketId, roomId, role) {
         }
     }
 }
-server.listen(8000, async () => {
-    try {
-        users = await User.find();
-    } catch (err) {
-        console.log(err);
-    }
-    console.log("Server is running on port 8000");
-});
+server.listen(8000, async () => console.log("Server is running on port 8000"));
 
 io.on("connection", (socket) => {
-    socket.on("join-room", (roomId) => {
-        let user = users.find((u) => u._id == socket.userId);
+    socket.on("join-room", async (roomId) => {
+        let user = await User.findById(socket.userId);
+        let userName = user["first_name"].concat(" ", user["last_name"]);
 
-        addClientToMap(user["first_name"], socket.id, roomId, user["role"]);
+        addClientToMap(userName, socket.id, roomId, user["role"]);
         socket.join(roomId);
         io.sockets
             .in(roomId)
@@ -121,12 +115,7 @@ io.on("connection", (socket) => {
             );
 
         socket.on("class-end", (roomId) => {
-            removeClientFromMap(
-                user["first_name"],
-                socket.id,
-                roomId,
-                user["role"]
-            );
+            removeClientFromMap(userName, socket.id, roomId, user["role"]);
 
             io.sockets
                 .in(roomId)
@@ -138,12 +127,7 @@ io.on("connection", (socket) => {
         });
 
         socket.on("disconnect", () => {
-            removeClientFromMap(
-                user["first_name"],
-                socket.id,
-                roomId,
-                user["role"]
-            );
+            removeClientFromMap(userName, socket.id, roomId, user["role"]);
             io.sockets
                 .in(roomId)
                 .emit(
