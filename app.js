@@ -1,12 +1,15 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const dotenv = require("dotenv");
+const cors = require("cors");
+const jwt = require("jsonwebtoken");
+
 const authRoute = require("./routes/auth");
 const dashboardRoute = require("./routes/dashboard");
 const classRoute = require("./routes/class");
-const cors = require("cors");
-const jwt = require("jsonwebtoken");
+
 const User = require("./models/User");
+const ClassLog = require("./models/ClassLog");
 const Class = require("./models/Class");
 
 dotenv.config();
@@ -72,11 +75,6 @@ function removeClientFromMap(userName, socketId, roomId, role) {
             if (userSocketIdSet.size == 0) {
                 rooms[roomId]["students"].delete(userName);
             }
-            console.log(rooms);
-
-            // if (rooms[roomId].size == 0) {
-            //     delete rooms[roomId];
-            // }
         }
     }
 
@@ -89,20 +87,18 @@ function removeClientFromMap(userName, socketId, roomId, role) {
             if (userSocketIdSet.size == 0) {
                 rooms[roomId]["teachers"].delete(userName);
             }
-            console.log(rooms);
-
-            // if (rooms[roomId].size == 0) {
-            //     delete rooms[roomId];
-            // }
         }
     }
 }
+
 server.listen(8000, async () => console.log("Server is running on port 8000"));
 
 io.on("connection", (socket) => {
     socket.on("join-room", async (roomId) => {
         let user = await User.findById(socket.userId);
         let userName = user["first_name"].concat(" ", user["last_name"]);
+
+        storeLog(roomId, socket.userId, Date.now(), "in");
 
         addClientToMap(userName, socket.id, roomId, user["role"]);
         socket.join(roomId);
@@ -117,17 +113,14 @@ io.on("connection", (socket) => {
         socket.on("class-end", (roomId) => {
             removeClientFromMap(userName, socket.id, roomId, user["role"]);
 
-            io.sockets
-                .in(roomId)
-                .emit(
-                    "leave-room",
-                    [...rooms[roomId]["students"].keys()],
-                    [...rooms[roomId]["teachers"].keys()]
-                );
+            io.sockets.in(roomId).emit("leave-room");
         });
 
         socket.on("disconnect", () => {
+            storeLog(roomId, socket.userId, Date.now(), "out");
+
             removeClientFromMap(userName, socket.id, roomId, user["role"]);
+
             io.sockets
                 .in(roomId)
                 .emit(
@@ -138,3 +131,25 @@ io.on("connection", (socket) => {
         });
     });
 });
+
+const storeLog = async (roomId, userId, time, type) => {
+    try {
+        const log = await ClassLog.create({
+            class_number: roomId,
+            time: time,
+            type: type,
+            user: userId,
+        });
+
+        await Class.update(
+            { number: roomId },
+            {
+                $push: {
+                    logs: log._id,
+                },
+            }
+        );
+    } catch (err) {
+        console.log(err);
+    }
+};
