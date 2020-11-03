@@ -17,6 +17,12 @@ const classSchema = new mongoose.Schema({
         type: Date,
         default: null,
     },
+    logs: [
+        {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "ClassLog",
+        },
+    ],
 });
 
 module.exports = mongoose.model("Class", classSchema);
