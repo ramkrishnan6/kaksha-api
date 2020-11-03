@@ -13,6 +13,10 @@ const classSchema = new mongoose.Schema({
         type: Date,
         default: Date.now,
     },
+    ended_at: {
+        type: Date,
+        default: null,
+    },
 });
 
 module.exports = mongoose.model("Class", classSchema);

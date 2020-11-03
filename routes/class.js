@@ -8,6 +8,8 @@ router.post("", verifyToken, async (req, res) => {
             { number: req.body.number },
             {
                 is_active: req.body.is_active,
+                started_at: req.body.started_at,
+                ended_at: req.body.ended_at,
             },
             { upsert: true }
         );
@@ -30,13 +32,8 @@ router.get("/:id", verifyToken, async (req, res) => {
                 is_active: is_active,
             },
         });
-    } catch {
-        res.json({
-            data: {
-                number: req.params.id,
-                is_active: false,
-            },
-        });
+    } catch (err) {
+        res.json({ message: err });
     }
 });
 
@@ -44,7 +41,12 @@ router.put("/:id", verifyToken, async (req, res) => {
     try {
         const updatedPost = await Class.updateOne(
             { number: req.params.id },
-            { $set: { is_active: req.body.is_active } }
+            {
+                $set: {
+                    is_active: req.body.is_active,
+                    ended_at: req.body.ended_at,
+                },
+            }
         );
         res.json(updatedPost);
     } catch (err) {
