@@ -22,15 +22,16 @@ router.post("", verifyToken, async (req, res) => {
 
 router.get("/:id", verifyToken, async (req, res) => {
     try {
-        const { number, is_active } = await Class.findOne({
+        classData = await Class.findOne({
             number: req.params.id,
-        });
-
-        res.json({
-            data: {
-                number: number,
-                is_active: is_active,
+        }).populate({
+            path: "logs",
+            populate: {
+                path: "user",
             },
+        });
+        res.json({
+            data: classData,
         });
     } catch (err) {
         res.json({ message: err });
@@ -49,6 +50,20 @@ router.put("/:id", verifyToken, async (req, res) => {
             }
         );
         res.json(updatedPost);
+    } catch (err) {
+        res.json(err);
+    }
+});
+
+router.get("", async (req, res) => {
+    try {
+        const classes = await Class.find().populate({
+            path: "logs",
+            populate: {
+                path: "user",
+            },
+        });
+        res.json(classes);
     } catch (err) {
         res.json(err);
     }
