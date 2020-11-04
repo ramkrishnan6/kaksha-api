@@ -107,7 +107,8 @@ io.on("connection", (socket) => {
             .emit(
                 "user-connected",
                 [...rooms[roomId]["students"].keys()],
-                [...rooms[roomId]["teachers"].keys()]
+                [...rooms[roomId]["teachers"].keys()],
+                userName
             );
 
         socket.on("class-end", (roomId) => {
@@ -126,7 +127,8 @@ io.on("connection", (socket) => {
                 .emit(
                     "user-disconnected",
                     [...rooms[roomId]["students"].keys()],
-                    [...rooms[roomId]["teachers"].keys()]
+                    [...rooms[roomId]["teachers"].keys()],
+                    userName
                 );
         });
     });

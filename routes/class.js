@@ -63,7 +63,7 @@ router.get("", async (req, res) => {
                 path: "user",
             },
         });
-        res.json(classes);
+        res.json({ data: classes });
     } catch (err) {
         res.json(err);
     }
