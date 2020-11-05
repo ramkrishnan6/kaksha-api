@@ -30,9 +30,11 @@ router.get("/:id", verifyToken, async (req, res) => {
                 path: "user",
             },
         });
-        res.json({
-            data: classData,
-        });
+        if (classData) {
+            res.json({
+                data: classData,
+            });
+        } else res.json({ data: { is_active: false } });
     } catch (err) {
         res.json({ message: err });
     }
