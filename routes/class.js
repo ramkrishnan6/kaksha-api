@@ -42,7 +42,7 @@ router.get("/:id", verifyToken, async (req, res) => {
 
 router.put("/:id", verifyToken, async (req, res) => {
     try {
-        const updatedPost = await Class.updateOne(
+        const updatedClass = await Class.updateOne(
             { number: req.params.id },
             {
                 $set: {
@@ -51,13 +51,13 @@ router.put("/:id", verifyToken, async (req, res) => {
                 },
             }
         );
-        res.json(updatedPost);
+        res.json(updatedClass);
     } catch (err) {
         res.json(err);
     }
 });
 
-router.get("", async (req, res) => {
+router.get("", verifyToken, async (req, res) => {
     try {
         const classes = await Class.find().populate({
             path: "logs",
