@@ -41,12 +41,6 @@ io.use(async (socket, next) => {
 const rooms = {};
 
 function addClientToMap(userName, socketId, roomId, role) {
-    if (!rooms[roomId]) {
-        rooms[roomId] = {};
-        rooms[roomId]["students"] = new Map();
-        rooms[roomId]["teachers"] = new Map();
-    }
-
     if (role == "student") {
         if (!rooms[roomId]["students"].has(userName)) {
             rooms[roomId]["students"].set(userName, new Set([socketId]));
@@ -62,7 +56,6 @@ function addClientToMap(userName, socketId, roomId, role) {
             rooms[roomId]["teachers"].get(userName).add(socketId);
         }
     }
-    console.log(rooms);
 }
 
 function removeClientFromMap(userName, socketId, roomId, role) {
@@ -93,48 +86,118 @@ function removeClientFromMap(userName, socketId, roomId, role) {
 
 server.listen(8000, async () => console.log("Server is running on port 8000"));
 
+const sendClassStatus = (socket) => {
+    let roomId = socket.handshake.query.roomId;
+    let classStatus = null;
+    socket.join(roomId);
+
+    try {
+        classStatus = rooms[roomId]["is_active"];
+    } catch {
+        rooms[roomId] = {};
+        rooms[roomId]["students"] = new Map();
+        rooms[roomId]["teachers"] = new Map();
+        rooms[roomId]["is_active"] = false;
+        classStatus = false;
+    }
+
+    io.in(roomId).emit("class-status", classStatus);
+};
+
+const startClass = (classId) => {
+    rooms[classId]["is_active"] = true;
+    console.log(rooms);
+
+    io.in(classId).emit("class-started", true);
+};
+
+const notifyUserJoined = (classId, userName) => {
+    io.in(classId).emit(
+        "user-connected",
+        [...rooms[classId]["students"].keys()],
+        [...rooms[classId]["teachers"].keys()],
+        userName
+    );
+};
+
+const notifyUserLeft = (classId, userName) => {
+    io.in(classId).emit(
+        "user-disconnected",
+        [...rooms[classId]["students"].keys()],
+        [...rooms[classId]["teachers"].keys()],
+        userName
+    );
+};
+
+const getUserInfo = async (socket) => {
+    let userDetails = await User.findById(socket.userId);
+
+    return {
+        userName: userDetails["first_name"].concat(
+            " ",
+            userDetails["last_name"]
+        ),
+        user: userDetails,
+    };
+};
+
 io.on("connection", (socket) => {
-    socket.on("join-room", async (roomId) => {
-        let user = await User.findById(socket.userId);
-        let userName = user["first_name"].concat(" ", user["last_name"]);
+    sendClassStatus(socket);
 
-        storeLog(roomId, socket.userId, Date.now(), "in");
+    socket.on("start-class", (classId) => {
+        startClass(classId);
+        logStartClass(classId);
+    });
 
-        addClientToMap(userName, socket.id, roomId, user["role"]);
-        socket.join(roomId);
-        io.sockets
-            .in(roomId)
-            .emit(
-                "user-connected",
-                [...rooms[roomId]["students"].keys()],
-                [...rooms[roomId]["teachers"].keys()],
-                userName
-            );
+    socket.on("join-class", async (classId) => {
+        if (rooms[classId]["is_active"]) {
+            let { userName, user } = await getUserInfo(socket);
 
-        socket.on("class-end", (roomId) => {
-            removeClientFromMap(userName, socket.id, roomId, user["role"]);
+            logUser(classId, socket.userId, Date.now(), "in");
+            addClientToMap(userName, socket.id, classId, user["role"]);
+            notifyUserJoined(classId, userName);
 
-            io.sockets.in(roomId).emit("leave-room");
-        });
+            socket.on("disconnect", () => {
+                logUser(classId, socket.userId, Date.now(), "out");
+                removeClientFromMap(userName, socket.id, classId, user["role"]);
+                notifyUserLeft(classId, userName);
+            });
 
-        socket.on("disconnect", () => {
-            storeLog(roomId, socket.userId, Date.now(), "out");
+            socket.on("class-end", (classId) => {
+                removeClientFromMap(userName, socket.id, classId, user["role"]);
+                logEndClass(classId);
 
-            removeClientFromMap(userName, socket.id, roomId, user["role"]);
-
-            io.sockets
-                .in(roomId)
-                .emit(
-                    "user-disconnected",
-                    [...rooms[roomId]["students"].keys()],
-                    [...rooms[roomId]["teachers"].keys()],
-                    userName
-                );
-        });
+                io.in(classId).emit("leave-room");
+                rooms[classId]["is_active"] = false;
+            });
+        }
     });
 });
 
-const storeLog = async (roomId, userId, time, type) => {
+const logEndClass = async (classId) => {
+    await Class.updateOne(
+        { number: classId },
+        {
+            $set: {
+                is_active: false,
+                ended_at: Date.now(),
+            },
+        }
+    );
+};
+
+const logStartClass = async (classId) => {
+    await Class.update(
+        { number: classId },
+        {
+            is_active: true,
+            started_at: Date.now(),
+        },
+        { upsert: true }
+    );
+};
+
+const logUser = async (roomId, userId, time, type) => {
     try {
         const log = await ClassLog.create({
             class_number: roomId,
