@@ -101,36 +101,32 @@ const sendClassStatus = (socket) => {
         classStatus = false;
     }
 
-    io.sockets.in(roomId).emit("class-status", classStatus);
+    io.in(roomId).emit("class-status", classStatus);
 };
 
 const startClass = (classId) => {
     rooms[classId]["is_active"] = true;
     console.log(rooms);
 
-    io.sockets.in(classId).emit("class-started", true);
+    io.in(classId).emit("class-started", true);
 };
 
 const notifyUserJoined = (classId, userName) => {
-    io.sockets
-        .in(classId)
-        .emit(
-            "user-connected",
-            [...rooms[classId]["students"].keys()],
-            [...rooms[classId]["teachers"].keys()],
-            userName
-        );
+    io.in(classId).emit(
+        "user-connected",
+        [...rooms[classId]["students"].keys()],
+        [...rooms[classId]["teachers"].keys()],
+        userName
+    );
 };
 
 const notifyUserLeft = (classId, userName) => {
-    io.sockets
-        .in(classId)
-        .emit(
-            "user-disconnected",
-            [...rooms[classId]["students"].keys()],
-            [...rooms[classId]["teachers"].keys()],
-            userName
-        );
+    io.in(classId).emit(
+        "user-disconnected",
+        [...rooms[classId]["students"].keys()],
+        [...rooms[classId]["teachers"].keys()],
+        userName
+    );
 };
 
 const getUserInfo = async (socket) => {
@@ -171,7 +167,7 @@ io.on("connection", (socket) => {
                 removeClientFromMap(userName, socket.id, classId, user["role"]);
                 logEndClass(classId);
 
-                io.sockets.in(classId).emit("leave-room");
+                io.in(classId).emit("leave-room");
                 rooms[classId]["is_active"] = false;
             });
         }
